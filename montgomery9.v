@@ -46,7 +46,8 @@ module montgomery(
     reg  [3:0]  addition_counter;
     reg  [6:0] c;
     wire [6:0] cc;
-    reg  [2:0] flag = 2'b00;
+    reg  [1:0] flag = 2'b00;
+    reg  flag_done = 1'b0; 
     assign cc = 7'b00000001;
     wire done_addsub;
     
@@ -72,19 +73,17 @@ module montgomery(
 
 
     // Sequential Counter logic
-    always @(posedge clk)
+   always @(posedge clk)
     begin // need signal to reset
         if ( resetn == 1'b0 )begin
-            i_counter <= 0;
-            c <= cc;
+            c <= 0;
         end
         else if ((state == STATE_C0is0 && addition_counter == 3'b111)|| (state == STATE_C0is1 && addition_counter == 3'b111)) begin
-            i_counter <= i_counter + 1;
-            c <= cc;
+            c <= 0;
         end
         else begin
-            i_counter <= i_counter;
-            c <= (c>>1) ;
+            if(start_adder == 1'b1) c <= cc;
+            else c <= (c>>1) ;
          end
     end
    
@@ -118,7 +117,8 @@ adder add(.clk(clk), .resetn(resetn), .shift(~c), .in_a(input_A), .in_b(input_B)
 
     STATE_IDLE: //00
     begin
-	    flag <= 2'b00;
+        flag <= 2'b00;
+        flag_done <= 1'b0;
         A <= in_a;
         start_adder <= 1'b1; //next clock to make c[0] == 1 and jump to STATE_CpluseAB
         input_A <= 0;
@@ -126,33 +126,108 @@ adder add(.clk(clk), .resetn(resetn), .shift(~c), .in_a(input_A), .in_b(input_B)
         input_B <= 0;
         next_state <= STATE_CplusAB;
         C <= 0;
-        end
+        i_counter <= 0;
+    end
 
 
-	STATE_CplusAB:
-	begin
-	subtract_adder <= 1'b0;
-
-	if(flag == 2'b00) // initialise A, and determine whether to add 0 or B
-	    begin
-		start_adder <= 1'b0; //next clock to make c[0] == 0 and make shift work
+    STATE_CplusAB:
+    begin
+    subtract_adder <= 1'b0;
+    
+    if(flag_done == 1'b1) begin
+       start_adder <= start_adder; //next clock to make c[0] == 0 and make shift work
+       A <= A;
+       input_A <= input_A;
+       input_B <= input_B;
+       flag <= flag;
+       flag_done <= 1'b0;
+       C <= C;
+       next_state <= next_state;
+        i_counter <=  i_counter ;
+    end
+    else if(flag == 2'b00 && A_i == 1'b0) begin
+        start_adder <= 1'b0; //next clock to make c[0] == 0 and make shift work
         A <= A >> 1;
-		input_A <= C[1024:0];
-		if(A_i == 1'b0) begin
-			input_B <= 0;
-			flag <= 2'b01;
-		end
+        input_A <= C[1024:0];
+        input_B <= 0;
+        flag <= 2'b01;
+        flag_done <= 1'b0;
+        C <= C;
+        next_state <= STATE_CplusAB;
+        i_counter <=  i_counter ;
+    end
+    else if(flag == 2'b00 && A_i == 1'b1) begin
+        start_adder <= 1'b0; //next clock to make c[0] == 0 and make shift work
+            A <= A >> 1;
+            input_A <= C[1024:0];
+            input_B <= in_b;
+            flag <= 2'b01;
+            flag_done <= 1'b0;
+            C <= C;
+            next_state <= STATE_CplusAB;
+            i_counter <=  i_counter ;
+    end
+    else if(flag == 2'b01 && done_addsub == 1'b1 && C[0] == 1'b0)begin
+            input_A <= input_A;
+            input_B <= input_B;
+            A <= A;
+            C <= addition_result;
+            flag <= 2'b00;
+            flag_done <= 1'b1;
+            start_adder <= 1'b0;
+            next_state <= STATE_C0is0;
+            i_counter <=  i_counter ;
+    end
+    else if(flag == 2'b01 && done_addsub == 1'b1 && C[0] == 1'b1)begin
+            input_A <= input_A;
+            input_B <= input_B;
+            A <= A;
+            C <= addition_result;
+            flag <= 2'b00;
+            flag_done <= 1'b1;
+            start_adder <= 1'b1;     //next clock to make c[0] == 1 and jump to STATE_C0is1
+            next_state <= STATE_C0is1;
+            i_counter <=  i_counter ;
+        end
+    else begin                  //continue the C = C + B until it finish
+           input_A <= input_A;
+           input_B <= input_B;
+           A <= A;               
+           start_adder <= 1'b0;
+           C <= C;
+           flag <= 2'b01;
+           flag_done <= 1'b0;
+           next_state <= STATE_CplusAB;
+           i_counter <=  i_counter ;
+    end  
+    
+    
+    end
+    
+    
+    
+    
+    /*
+    if(flag == 2'b00) // initialise A, and determine whether to add 0 or B
+        begin
+        start_adder <= 1'b0; //next clock to make c[0] == 0 and make shift work
+        A <= A >> 1;
+        input_A <= C[1024:0];
+        if(A_i == 1'b0) begin
+            input_B <= 0;
+            flag <= 2'b01;
+        end
         else begin
-			input_B <= in_b;
-			flag <= 2'b01;
-		end
-		C <= C;
-		next_state <= STATE_CplusAB;
+            input_B <= in_b;
+            flag <= 2'b01;
+        end
+        C <= C;
+        next_state <= STATE_CplusAB;
 
-	    end
-	else if(flag == 2'b01) // start start_adder, pass in the signal
-	    begin
-		input_A <= input_A;
+        end
+    else if(flag == 2'b01) // start start_adder, pass in the signal
+        begin
+        input_A <= input_A;
         input_B <= input_B;
         A <= A;
         
@@ -176,12 +251,39 @@ adder add(.clk(clk), .resetn(resetn), .shift(~c), .in_a(input_A), .in_b(input_B)
             next_state <= STATE_CplusAB;
         end    
 
-	end
-
-
+    end
+end
+*/
     STATE_C0is0: //10
     begin
-	flag <= 2'b00;
+       if(i_counter == 11'b10_000_000_000) begin
+             flag <= flag;
+              flag_done <= 1'b1;
+              A <= A;
+              start_adder <= start_adder;    //next clock to make c[0] == 1 and jump to STATE_CplusAB
+              input_A <= input_A;
+              input_B <= input_B;
+              subtract_adder<=subtract_adder;
+              C <= C ;
+              next_state <= STATE_CbiggerthanM;
+              i_counter <=  i_counter ;
+       end
+       else if(flag_done == 1'b0)begin
+            flag <= flag;
+            flag_done <= 1'b1;
+            A <= A;
+            start_adder <= start_adder;    //next clock to make c[0] == 1 and jump to STATE_CplusAB
+            input_A <= input_A;
+            input_B <= input_B;
+            subtract_adder<=subtract_adder;
+            C <= C ;
+            next_state <= next_state;
+            i_counter <=  i_counter ;
+
+       end
+       else begin
+       flag <= 2'b00;
+       flag_done <= 1'b0;
         A <= A;
         start_adder <= 1'b1;    //next clock to make c[0] == 1 and jump to STATE_CplusAB
         input_A <= 0;
@@ -189,25 +291,77 @@ adder add(.clk(clk), .resetn(resetn), .shift(~c), .in_a(input_A), .in_b(input_B)
         subtract_adder<=1'b0;
         C <= C >> 1 ;
         next_state <= STATE_CplusAB;
+        i_counter <=  i_counter +1 ;
+        end
     end
 
 
     STATE_C0is1:
-    begin
-   	subtract_adder <= 1'b0;
-
-    if(flag == 2'b00) // initialise A, and determine whether to add 0 or B
+begin
+    subtract_adder <= 1'b0;
+    
+    if(i_counter == 11'b10_000_000_000) begin
+        flag <= flag;
+        flag_done <= 1'b1;
+        A <= A;
+        start_adder <= start_adder;    //next clock to make c[0] == 1 and jump to STATE_CplusAB
+        input_A <= input_A;
+        input_B <= input_B;
+       // subtract_adder<=subtract_adder;
+        C <= C ;
+        next_state <= STATE_CbiggerthanM;
+        i_counter <=  i_counter ;
+    end
+    else if(flag_done == 1'b1)begin
+        start_adder <= start_adder; //next clock to make c[0] == 0 and make shift work
+        A <= A;
+        input_A <= input_A;
+        input_B <= input_B;
+        flag <= flag;
+        flag_done<=flag_done;
+        C <= C;
+        next_state <= next_state;
+        i_counter <=  i_counter ;
+    end
+    else if(flag == 2'b00) // initialise A, and determine whether to add 0 or B
         begin
         start_adder <= 1'b0; //next clock to make c[0] == 0 and make shift work
         A <= A;
         input_A <= C[1024:0];
         input_B <= M;
         flag <= 2'b01;
+        flag_done <= 1'b0;
         C <= C;
         next_state <= STATE_C0is1;
-        end
-    
-    else if(flag == 2'b01) // start start_adder, pass in the signal
+        i_counter <=  i_counter ;
+    end
+    else if(flag == 2'b01 && done_addsub == 1'b1) // start start_adder, pass in the signal
+        begin
+        input_A <= input_A;
+        input_B <= input_B;
+        A <= A;
+        start_adder <= 1'b1;    //next clock to make c[0] == 1 and jump to STATE_CplusAB
+        C <= addition_result>>1;
+        flag <= 2'b00;
+        flag_done <= 1'b1;
+        next_state <= STATE_CplusAB;
+        i_counter <=  i_counter + 1 ;
+    end
+    else begin
+        input_A <= input_A;
+        input_B <= input_B;
+        A <= A;
+        start_adder <= 1'b0;    
+        C <= C;
+        flag <= 2'b01;
+        flag_done <= 1'b0;
+        next_state <= STATE_C0is1;
+        i_counter <=  i_counter ;
+    end
+ end       
+        
+    /*
+    else if(flag == 2'b01 ) // start start_adder, pass in the signal
         begin
         input_A <= input_A;
         input_B <= input_B;
@@ -226,7 +380,7 @@ adder add(.clk(clk), .resetn(resetn), .shift(~c), .in_a(input_A), .in_b(input_B)
             flag <= 2'b01;
             next_state <= STATE_C0is1;
         end    
-    end
+    end*/
 
         
 
@@ -234,26 +388,88 @@ adder add(.clk(clk), .resetn(resetn), .shift(~c), .in_a(input_A), .in_b(input_B)
 
     STATE_CbiggerthanM:
     begin
-	flag <= 2'b00;
+    subtract_adder <= 1'b1;
+    
+    if(flag_done == 1'b1)begin
+            start_adder <= start_adder; //next clock to make c[0] == 0 and make shift work
+            A <= A;
+            input_A <= input_A;
+            input_B <= input_B;
+            flag <= flag;
+            flag_done<=flag_done;
+            C <= C;
+            next_state <= next_state;
+            i_counter <=  i_counter ;
+        end
+ 
+    else if(flag == 2'b00) // initialise A, and determine whether to add 0 or B
+        begin
+        start_adder <= 1'b0; //next clock to make c[0] == 0 and make shift work
         A <= A;
-        start_adder <= 1'b1;
         input_A <= C[1024:0];
         input_B <= M;
-        subtract_adder<=1'b1;
-    //adder(clk, resetn, C, M, start, 1'b1, addition_result_CbiggerthanM, done_addsub_CbiggerthanM);
-        if(done_addsub == 1'b1) begin
-            next_state <= STATE_keepresult;
-            C <= addition_result;
+        flag <= 2'b01;
+        flag_done <= 1'b0;
+        C <= C;
+        next_state <= STATE_C0is1;
+        i_counter <=  i_counter ;
         end
-        else begin
-            next_state <= STATE_CbiggerthanM;
-            C <= C;
-        end
-    end
         
+    else if(flag == 2'b01 && done_addsub == 1'b1) // start start_adder, pass in the signal 
+    begin
+        input_A <= input_A;
+        input_B <= input_B;
+        A <= A;
+        i_counter <=  i_counter ;
+        start_adder <= 1'b1;    //next clock to make c[0] == 1 and jump to STATE_CplusAB
+        C <= addition_result;
+        flag <= 2'b00;
+        flag_done <= 1'b0;
+        next_state <= STATE_keepresult;
+    end
+    else begin
+        input_A <= input_A;
+        input_B <= input_B;
+        A <= A;
+        i_counter <=  i_counter ;
+        start_adder <= 1'b0;    
+        C <= C;
+        flag <= 2'b01;
+        flag_done <= 1'b0;
+        next_state <= STATE_C0is1;
+    end
+    /*
+    else if(flag == 2'b01) // start start_adder, pass in the signal
+        begin
+        input_A <= input_A;
+        input_B <= input_B;
+        A <= A;
+        i_counter <=  i_counter ;
+        if(done_addsub == 1'b1) begin   //complete the C = C + B 
+            start_adder <= 1'b1;    //next clock to make c[0] == 1 and jump to STATE_CplusAB
+            C <= addition_result;
+            flag <= 2'b00;
+            flag_done <= 1'b0;
+            next_state <= STATE_CplusAB;
+            end
+        
+        else begin                 //continue the C = C + B until it finish
+            start_adder <= 1'b0;    
+            C <= C;
+            flag <= 2'b01;
+            flag_done <= 1'b0;
+            next_state <= STATE_C0is1;
+        end    
+    end*/
+end
+        
+
+
+
     STATE_keepresult:
     begin
-	flag <= 2'b00;
+    flag <= 2'b00;
+    flag_done <= 1'b0;
         A <= A;
         start_adder <= 1'b0;
         input_A <= 0;
@@ -261,11 +477,13 @@ adder add(.clk(clk), .resetn(resetn), .shift(~c), .in_a(input_A), .in_b(input_B)
         subtract_adder<=1'b0;
         C <= C;
         next_state <= STATE_keepresult;
+        i_counter <=  i_counter ;
     end
        
     endcase
     end
     //Synchronous logic to update state
+    
     always @(posedge clk)
     begin
         if (resetn==1'b0)
