@@ -86,6 +86,112 @@ void print_bram_contents()
 		xil_printf("%08x %08x %08x %08x\n\r",my_montgomery_data[i], my_montgomery_data[i+1], my_montgomery_data[i+2], my_montgomery_data[i+3]);
 }
 
+
+void mont(uint32_t result, uint32_t A, uint32_t B, uint32_t m){
+    // Send message
+    xil_printf("Sending A\n\r");
+    my_montgomery_port[0] = 0x0; //Send a command to P1
+    bram_dma_transfer(dma_config, A, DMA_TRANSFER_NUMBER_OF_WORDS);
+    port2_wait_for_done(); //Wait until Port2=1
+
+
+    // Send rsqModM
+    xil_printf("Sending B\n\r");
+    my_montgomery_port[0] = 0x0; //Send a command to P1
+    bram_dma_transfer(dma_config, B, DMA_TRANSFER_NUMBER_OF_WORDS);
+    port2_wait_for_done(); //Wait until Port2=1
+
+
+    // Send modullus
+    xil_printf("Sending m\n\r");
+    my_montgomery_port[0] = 0x0; //Send a command to P1
+    bram_dma_transfer(dma_config, m, DMA_TRANSFER_NUMBER_OF_WORDS);
+    port2_wait_for_done(); //Wait until Port2=1
+
+
+    // Compute Mont(message, rsqModM)
+    my_montgomery_port[0] = 0x1; //Send a command to P1
+    port2_wait_for_done(); //Wait until Port2=1
+    print_bram_contents(); //Print BRAM to serial port.
+
+
+    // Give the results to 'result'
+
+    // Print x_delta values
+    xil_printf("Results! \n\r");
+    my_montgomery_port[0] = 0x2; //Send a command to P1
+    port2_wait_for_done(); //Wait until Port2=1
+    print_bram_contents(); //Print BRAM to serial port.
+}
+
+
+
+
+void encryption(uint32_t rsqModM, uint32_t rModM, uint32_t e, uint32_t modullus, uint32_t input_message, uint32_t output_ciphertext){
+    /////////// Initialise variable A
+    A = rModM;
+
+    /////////// Initialise variable x_delta = Mont(message, rsqModM) ///////////
+
+    // Send message
+    xil_printf("Initialise x_delta: sending message\n\r");
+    my_montgomery_port[0] = 0x0; //Send a command to P1
+    bram_dma_transfer(dma_config,input_message,DMA_TRANSFER_NUMBER_OF_WORDS);
+    port2_wait_for_done(); //Wait until Port2=1
+
+
+    // Send rsqModM
+    xil_printf("Initialise x_delta: sending rsqModM\n\r");
+    my_montgomery_port[0] = 0x0; //Send a command to P1
+    bram_dma_transfer(dma_config,rsqModM,DMA_TRANSFER_NUMBER_OF_WORDS);
+    port2_wait_for_done(); //Wait until Port2=1
+
+
+    // Send modullus
+    xil_printf("Initialise x_delta: sending modullus\n\r");
+    my_montgomery_port[0] = 0x0; //Send a command to P1
+    bram_dma_transfer(dma_config,modullus,DMA_TRANSFER_NUMBER_OF_WORDS);
+    port2_wait_for_done(); //Wait until Port2=1
+
+
+    // Compute Mont(message, rsqModM)
+    my_montgomery_port[0] = 0x1; //Send a command to P1
+    port2_wait_for_done(); //Wait until Port2=1
+    print_bram_contents(); //Print BRAM to serial port.
+
+
+    // Print x_delta values
+    xil_printf("Results! \n\r");
+    my_montgomery_port[0] = 0x2; //Send a command to P1
+    port2_wait_for_done(); //Wait until Port2=1
+    print_bram_contents(); //Print BRAM to serial port.
+
+
+
+
+
+
+    /////////// Calculate A depending on e(i) ///////////
+    t = 3; // t = number of bits of e
+    for(i = t; i >= 0; i--){
+        if()
+    }
+
+
+
+
+
+
+    /////////// Finalise A ///////////
+}
+
+void decryption(uint32_t rsqModM, uint32_t rModM, uint32_t d, uint32_t modullus, uint32_t input_ciphertext, uint32_t output_message){
+    /////////// Initialise variables x_delta and A ///////////
+    /////////// Calculate A depending on e(i) ///////////
+    /////////// Finalise A ///////////
+}
+
+
 int main()
 {
 	int i;
@@ -95,82 +201,68 @@ int main()
 
     test_dma_transfer();
 
-    uint32_t a[32] = {0x1ba, 0x0, 0x0, 0x0, 0x0, 0x0, 0x0, 0x0, 0x0, 0x0, 0x0, 0x0, 0x0, 0x0, 0x0, 0x0, 0x0, 0x0, 0x0, 0x0, 0x0, 0x0, 0x0, 0x0, 0x0, 0x0, 0x0, 0x0, 0x0, 0x0, 0x0 , 0x0};
-    uint32_t b[32] = {0x91b, 0x0, 0x0, 0x0, 0x0, 0x0, 0x0, 0x0, 0x0, 0x0, 0x0, 0x0, 0x0, 0x0, 0x0, 0x0, 0x0, 0x0, 0x0, 0x0, 0x0, 0x0, 0x0, 0x0, 0x0, 0x0, 0x0, 0x0, 0x0, 0x0, 0x0, 0x0};
-    uint32_t N[32] = {0xe67a6f31, 0xa677bce5, 0x3b9e66f8, 0x32dff402, 0x2ab9a7c8, 0xbe08bc1e, 0x2ade1186, 0x8e88e8cf, 0x716a5c3b, 0x5453c47, 0x93ade446, 0xdc771f42, 0xe1709725, 0x7f89ebb5, 0x1d501ea9, 0x93c9933, 0xcf1ae468, 0x56ba1eb0, 0x358e7c24, 0x2daae084, 0x4da058ec, 0x27028a89, 0x4f2e5438, 0x29ab96b2, 0xf9072101, 0xe7990185, 0x199af8fe, 0x6887926d, 0xcfb0450e, 0x36a53dd9, 0xed3982c, 0xd1d3b4d6};
+    /////////// Initialise variables - turn these into array of 32bit numbers!!
+    // Seed = 2016. 
+
+    // rsqModM 0x7C4D620EEE8D2AA7BBAA8784F92EE2AFF35EE001A23B4EC9367BFBFDCCE2831BB09504\
+    // BA0CC74F9C9C23ED41A451D99F7B8CE10AD0AF741F323CBD3178A960878A263EFC7360E045B5FA0\
+    // F88377E4C8923CD92465E525B979FF92E2260AE04FB918A54E7927115A1ED1B354CC4D245846C43\
+    // A8A08E6F2AC4CAEFE3AA2CF8DC4
+
+    // rModM 0x3D63B8F702B6DBF5B3657143E6BA3A916C9DD3F7A8C4CDD8C90F45FF6E1529EB9DB25D5\
+    // A70719231347B7FCF6BC4555C4502B14C3CD9ABD23571700DC876C4590240034C2E5AF2A2200A01\
+    // 52D0FB23A3553872CB83B1D6EA430508B0ADDBDBD33E3837ACE0D5C825CCD7F24E416E25FFFC628\
+    // 7822CF6A6618471F1F844DC949F
+
+    // e 0x101
+
+    // d 0xAEEC18011B718DF753CBAB209A33C165619BF9C1C4F178C899F93E97E\
+    // BBF28046053BA095B2E56BEDAC9C5E5EFD204F4C8F1A063D1464FA5AC1A895A35E6EDE43606A04F\
+    // DEC017053AE7B0F0F9F03713F4F1AF73756249962DF9497127A789D81FE04C3921693086983323B\
+    // A6F2DCDCD47A4F73E1902D801593BDD0F6E4A09D1
+
+    // modullus 0xC29C4708FD49240A4C9A8EBC1945C56E93622C08573B322736F0BA0091EAD614624D\
+    // A2A58F8E6DCECB848030943BAAA3BAFD4EB3C326542DCA8E8FF237893BA6FDBFFCB3D1A50D5DDFF\
+    // 5FEAD2F04DC5CAAC78D347C4E2915BCFAF74F5224242CC1C7C8531F2A37DA33280DB1BE91DA0003\
+    // 9D787DD309599E7B8E0E07BB236B61
+
+    // message 0xB0C20CFD982B1F572862A26E2F799929FAF17B14507BD3C584622ABB53EED310644DE\
+    // C242CF10C2CC3F5B1AF9DA5A9FA4E7EF60D282F1C7724A7C49168ABF083DB7B1F7E05CDE1398ED2\
+    // D0FFF9A2DCEB4835FDD9FF3F0338551F0E202CEAD1A698167F469B3A1C1D5352B15E965BBE2F5D5\
+    // 197186A66E7693E2F3CC708D27022
 
 
 
 
-    // Read 'A'
-    xil_printf("A: 	PORT1=%x\n\r",0x0);
-    my_montgomery_port[0] = 0x0; //Send a command to P1
-
-    bram_dma_transfer(dma_config,a,DMA_TRANSFER_NUMBER_OF_WORDS);
-    port2_wait_for_done(); //Wait until Port2=1
-    print_bram_contents();
+    /////////// Encryption
+    void encryption(uint32_t rsqModM, uint32_t rModM, uint32_t e, uint32_t message, uint32_t output_ciphertext));
 
 
 
-    // Read 'B'
-    xil_printf("B: 	PORT1=%x\n\r",0x0);
-    my_montgomery_port[0] = 0x0; //Send a command to P1
-
-    bram_dma_transfer(dma_config,b,DMA_TRANSFER_NUMBER_OF_WORDS);
-    port2_wait_for_done(); //Wait until Port2=1
-    print_bram_contents();
+    /////////// Print out encryption results
+    print(output_ciphertext);
 
 
 
-    // Read 'M'
-    xil_printf("M: 	PORT1=%x\n\r",0x0);
-    my_montgomery_port[0] = 0x0; //Send a command to P1
+    /////////// Decryption
+    void decryption(uint32_t rsqModM, uint32_t rModM, uint32_t d, uint32_t output_ciphertext, uint32_t output_message);
 
-    bram_dma_transfer(dma_config,N,DMA_TRANSFER_NUMBER_OF_WORDS);
-    port2_wait_for_done(); //Wait until Port2=1
-    print_bram_contents();
+
+
+    /////////// Print out decryption results
+    print(output_message);
+
+
+
+    /////////// Compare the encrypted & decrypted results
 
 
 
 
-    xil_printf("Computing! \n\r",0x0);
-    // Perform the compute operation
-    my_montgomery_port[0] = 0x1; //Send a command to P1
-    port2_wait_for_done(); //Wait until Port2=1
-    print_bram_contents(); //Print BRAM to serial port.
 
 
 
-    // Write out the results
-    xil_printf("Results! \n\r",0x0);
-    my_montgomery_port[0] = 0x2; //Send a command to P1
-    port2_wait_for_done(); //Wait until Port2=1
-    print_bram_contents(); //Print BRAM to serial port.
 
-
-
-    //Test the port-based comms
-    /*
-    xil_printf("PORT1=%x\n\r",0x0);
-    my_montgomery_port[0] = 0x0; //Send a command to P1
-
-    bram_dma_transfer(dma_config,srcA,DMA_TRANSFER_NUMBER_OF_WORDS);
-    port2_wait_for_done(); //Wait until Port2=1
-
-    print_bram_contents(); //Print BRAM to serial port.
-
-    //Perform the compute operation
-    xil_printf("PORT1=%x\n\r",0x1);
-    my_montgomery_port[0] = 0x1; //Send a command to P1
-    port2_wait_for_done(); //Wait until Port2=1
-
-    //Write the result to BRAM
-    xil_printf("PORT1=%x\n\r",0x2);
-    my_montgomery_port[0] = 0x2; //Send a command to P1
-    port2_wait_for_done(); //Wait until Port2=1
-
-    print_bram_contents(); //Print BRAM to serial port.
-	*/
 
     cleanup_platform();
     return 0;
