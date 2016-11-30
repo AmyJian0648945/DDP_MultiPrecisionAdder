@@ -233,6 +233,22 @@ int main()
 
 
 
+	
+	/* TODO:
+			1. go to some place with linux, make the long integers into arrays of uint32_t [32]
+			2. finish mont (A,B,m)
+				- find out how to get the results into an array instead of just printing it
+			3. finish encryption and decryption 
+	 */
+	
+	
+	
+	
+	
+	
+	
+	
+	
 
     /////////// Encryption
     void encryption(uint32_t rsqModM, uint32_t rModM, uint32_t e, uint32_t message, uint32_t output_ciphertext));
