@@ -138,6 +138,7 @@ void mont(uint32_t result, uint32_t A, uint32_t B, uint32_t m){
 
 
 void encryption(uint32_t rsqModM, uint32_t rModM, uint32_t e, uint8_t numOfBits, uint32_t modullus, uint32_t input_message, uint32_t output_ciphertext){
+
     /////////// Initialise variables: A, x_delta
     uint32_t A, x_delta; 
 
@@ -146,7 +147,6 @@ void encryption(uint32_t rsqModM, uint32_t rModM, uint32_t e, uint8_t numOfBits,
 
 
     /////////// Calculate A depending on e(i) ///////////
-    
     for(i = numOfBits; i >= 0; i--){
         if(e[i] == 0)   mont(A, A, A, modullus);
         else            mont(A, A, x_delta, modullus);
@@ -160,9 +160,25 @@ void encryption(uint32_t rsqModM, uint32_t rModM, uint32_t e, uint8_t numOfBits,
 }
 
 void decryption(uint32_t rsqModM, uint32_t rModM, uint32_t d, uint32_t modullus, uint32_t input_ciphertext, uint32_t output_message){
-    /////////// Initialise variables x_delta and A ///////////
+    
+    /////////// Initialise variables: A, x_delta
+    uint32_t A, x_delta; 
+
+    A = rModM;
+    mont(x_delta, input_message, rsqModM, modullus);  // x_delta = Mont(message, rsqModM)
+
+
     /////////// Calculate A depending on e(i) ///////////
+    for(i = numOfBits; i >= 0; i--){
+        if(e[i] == 0)   mont(A, A, A, modullus);
+        else            mont(A, A, x_delta, modullus);
+    }
+
+
     /////////// Finalise A ///////////
+    mont(output_message, A, 1, modullus);
+
+    
 }
 
 
