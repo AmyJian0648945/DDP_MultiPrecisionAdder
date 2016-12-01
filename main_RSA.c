@@ -110,62 +110,40 @@ void mont(uint32_t result, uint32_t A, uint32_t B, uint32_t m){
 
 
     // Compute Mont(message, rsqModM)
+    xil_printf("Computing...\n\r");
     my_montgomery_port[0] = 0x1; //Send a command to P1
     port2_wait_for_done(); //Wait until Port2=1
     print_bram_contents(); //Print BRAM to serial port.
 
-
-    // Give the results to 'result'
 
     // Print x_delta values
     xil_printf("Results! \n\r");
     my_montgomery_port[0] = 0x2; //Send a command to P1
     port2_wait_for_done(); //Wait until Port2=1
     print_bram_contents(); //Print BRAM to serial port.
+
+
+    // Give the results to 'result'
+    for (i=0; i<DMA_TRANSFER_NUMBER_OF_WORDS; i+=4){
+        result[i]   = my_montgomery_data[i];
+        result[i+1] = my_montgomery_data[i+1];
+        result[i+2] = my_montgomery_data[i+2];
+        result[i+3] = my_montgomery_data[i+3];
+    }
 }
 
 
 
 
 void encryption(uint32_t rsqModM, uint32_t rModM, uint32_t e, uint32_t modullus, uint32_t input_message, uint32_t output_ciphertext){
-    /////////// Initialise variable A
+    /////////// Initialise variables: A, x_delta
+    uint32_t A, x_delta; 
+
     A = rModM;
-
-    /////////// Initialise variable x_delta = Mont(message, rsqModM) ///////////
-
-    // Send message
-    xil_printf("Initialise x_delta: sending message\n\r");
-    my_montgomery_port[0] = 0x0; //Send a command to P1
-    bram_dma_transfer(dma_config,input_message,DMA_TRANSFER_NUMBER_OF_WORDS);
-    port2_wait_for_done(); //Wait until Port2=1
+    mont(x_delta, input_message, rsqModM, modullus);  // x_delta = Mont(message, rsqModM)
 
 
-    // Send rsqModM
-    xil_printf("Initialise x_delta: sending rsqModM\n\r");
-    my_montgomery_port[0] = 0x0; //Send a command to P1
-    bram_dma_transfer(dma_config,rsqModM,DMA_TRANSFER_NUMBER_OF_WORDS);
-    port2_wait_for_done(); //Wait until Port2=1
-
-
-    // Send modullus
-    xil_printf("Initialise x_delta: sending modullus\n\r");
-    my_montgomery_port[0] = 0x0; //Send a command to P1
-    bram_dma_transfer(dma_config,modullus,DMA_TRANSFER_NUMBER_OF_WORDS);
-    port2_wait_for_done(); //Wait until Port2=1
-
-
-    // Compute Mont(message, rsqModM)
-    my_montgomery_port[0] = 0x1; //Send a command to P1
-    port2_wait_for_done(); //Wait until Port2=1
-    print_bram_contents(); //Print BRAM to serial port.
-
-
-    // Print x_delta values
-    xil_printf("Results! \n\r");
-    my_montgomery_port[0] = 0x2; //Send a command to P1
-    port2_wait_for_done(); //Wait until Port2=1
-    print_bram_contents(); //Print BRAM to serial port.
-
+    /////////// Initialise variable  ///////////
 
 
 
