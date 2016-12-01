@@ -88,6 +88,7 @@ void print_bram_contents()
 
 
 void mont(uint32_t result, uint32_t A, uint32_t B, uint32_t m){
+
     // Send message
     xil_printf("Sending A\n\r");
     my_montgomery_port[0] = 0x0; //Send a command to P1
@@ -130,12 +131,13 @@ void mont(uint32_t result, uint32_t A, uint32_t B, uint32_t m){
         result[i+2] = my_montgomery_data[i+2];
         result[i+3] = my_montgomery_data[i+3];
     }
+
 }
 
 
 
 
-void encryption(uint32_t rsqModM, uint32_t rModM, uint32_t e, uint32_t modullus, uint32_t input_message, uint32_t output_ciphertext){
+void encryption(uint32_t rsqModM, uint32_t rModM, uint32_t e, uint8_t numOfBits, uint32_t modullus, uint32_t input_message, uint32_t output_ciphertext){
     /////////// Initialise variables: A, x_delta
     uint32_t A, x_delta; 
 
@@ -143,24 +145,18 @@ void encryption(uint32_t rsqModM, uint32_t rModM, uint32_t e, uint32_t modullus,
     mont(x_delta, input_message, rsqModM, modullus);  // x_delta = Mont(message, rsqModM)
 
 
-    /////////// Initialise variable  ///////////
-
-
-
-
-
     /////////// Calculate A depending on e(i) ///////////
-    t = 3; // t = number of bits of e
-    for(i = t; i >= 0; i--){
-        if()
+    
+    for(i = numOfBits; i >= 0; i--){
+        if(e[i] == 0)   mont(A, A, A, modullus);
+        else            mont(A, A, x_delta, modullus);
     }
 
 
-
-
-
-
     /////////// Finalise A ///////////
+    mont(output_ciphertext, A, 1, modullus);
+
+
 }
 
 void decryption(uint32_t rsqModM, uint32_t rModM, uint32_t d, uint32_t modullus, uint32_t input_ciphertext, uint32_t output_message){
@@ -193,7 +189,7 @@ int main()
     // 7822CF6A6618471F1F844DC949F
 
     // e 0x101
-
+    
     // d 0xAEEC18011B718DF753CBAB209A33C165619BF9C1C4F178C899F93E97E\
     // BBF28046053BA095B2E56BEDAC9C5E5EFD204F4C8F1A063D1464FA5AC1A895A35E6EDE43606A04F\
     // DEC017053AE7B0F0F9F03713F4F1AF73756249962DF9497127A789D81FE04C3921693086983323B\
@@ -213,10 +209,8 @@ int main()
 
 	
 	/* TODO:
-			1. go to some place with linux, make the long integers into arrays of uint32_t [32]
-			2. finish mont (A,B,m)
-				- find out how to get the results into an array instead of just printing it
-			3. finish encryption and decryption 
+			- go to some place with linux, make the long integers into arrays of uint32_t [32]
+			- finish encryption and decryption 
 	 */
 	
 	
@@ -229,7 +223,8 @@ int main()
 	
 
     /////////// Encryption
-    void encryption(uint32_t rsqModM, uint32_t rModM, uint32_t e, uint32_t message, uint32_t output_ciphertext));
+    numOfBits = 2; // t = number of bits e has, but -1
+    void encryption(uint32_t rsqModM, uint32_t rModM, uint32_t e, uint8_t numOfBits, uint32_t message, uint32_t output_ciphertext));
 
 
 
@@ -239,7 +234,8 @@ int main()
 
 
     /////////// Decryption
-    void decryption(uint32_t rsqModM, uint32_t rModM, uint32_t d, uint32_t output_ciphertext, uint32_t output_message);
+    numOfBits =;
+    void decryption(uint32_t rsqModM, uint32_t rModM, uint32_t d, uint8_t numOfBits, uint32_t output_ciphertext, uint32_t output_message);
 
 
 
