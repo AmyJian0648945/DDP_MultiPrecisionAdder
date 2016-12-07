@@ -137,19 +137,24 @@ void mont(uint32_t result, uint32_t A, uint32_t B, uint32_t m){
 
 
 
-void encryption(uint32_t rsqModM, uint32_t rModM, uint32_t e, uint8_t numOfBits, uint32_t modullus, uint32_t input_message, uint32_t output_ciphertext){
+void encryption(uint32_t *rsqModM, uint32_t *rModM, uint32_t e, uint8_t *numOfBits, uint32_t *modullus, uint32_t *input_message, uint32_t *output_ciphertext){
 
     /////////// Initialise variables: A, x_delta
-    uint32_t A, x_delta; 
+    uint32_t A, x_delta;
+    uint32_t bin = 0b1;  //use this to bitwise-AND 
+
 
     A = rModM;
     mont(x_delta, input_message, rsqModM, modullus);  // x_delta = Mont(message, rsqModM)
 
 
     /////////// Calculate A depending on e(i) ///////////
-    for(i = numOfBits; i >= 0; i--){
-        if(e[i] == 0)   mont(A, A, A, modullus);
-        else            mont(A, A, x_delta, modullus);
+    // With each iteration, bin = bin * 2 to get the next bit
+    for(i = 0; i < numOfBits; i--){
+        if((e & bin) == 0)  mont(A, A, modullus);
+        else                mont(A, A, x_delta, modullus);
+
+        bin = bin << 1;
     }
 
 
@@ -159,26 +164,38 @@ void encryption(uint32_t rsqModM, uint32_t rModM, uint32_t e, uint8_t numOfBits,
 
 }
 
-void decryption(uint32_t rsqModM, uint32_t rModM, uint32_t d, uint32_t modullus, uint32_t input_ciphertext, uint32_t output_message){
+void decryption(uint32_t *rsqModM, uint32_t *rModM, uint32_t *d, uint32_t *modullus, uint32_t *input_ciphertext, uint32_t *output_message){
     
     /////////// Initialise variables: A, x_delta
     uint32_t A, x_delta; 
+    uint32_t bin = 0b1;  //use this to bitwise-AND 
 
     A = rModM;
     mont(x_delta, input_message, rsqModM, modullus);  // x_delta = Mont(message, rsqModM)
 
 
+
+
     /////////// Calculate A depending on e(i) ///////////
-    for(i = numOfBits; i >= 0; i--){
-        if(e[i] == 0)   mont(A, A, A, modullus);
-        else            mont(A, A, x_delta, modullus);
+    // With each iteration, bin = bin * 2 to get the next bit
+    // i toggles d[i]
+    // j toggles the bits within d[i]
+    
+    for(i = 0; i < numOfBits; i--){
+        temp = d[i];
+        for(j = 0; j < 32; j++){
+            if(temp & bin == 0)   mont(A, A, A, modullus);
+            else            mont(A, A, x_delta, modullus);
+
+            bin = bin << 1;
+        }
     }
 
 
     /////////// Finalise A ///////////
     mont(output_message, A, 1, modullus);
 
-    
+
 }
 
 
@@ -205,7 +222,8 @@ int main()
     // 7822CF6A6618471F1F844DC949F
 
     // e 0x101
-    
+
+
     // d 0xAEEC18011B718DF753CBAB209A33C165619BF9C1C4F178C899F93E97E\
     // BBF28046053BA095B2E56BEDAC9C5E5EFD204F4C8F1A063D1464FA5AC1A895A35E6EDE43606A04F\
     // DEC017053AE7B0F0F9F03713F4F1AF73756249962DF9497127A789D81FE04C3921693086983323B\
@@ -221,6 +239,10 @@ int main()
     // D0FFF9A2DCEB4835FDD9FF3F0338551F0E202CEAD1A698167F469B3A1C1D5352B15E965BBE2F5D5\
     // 197186A66E7693E2F3CC708D27022
 
+    uint32_t d[32] = {  0x6e4a09d1, 0x593bdd0f, 0x1902d801, 0x47a4f73e, 0x6f2dcdcd, 0x983323ba, 0x21693086, 0x1fe04c39, 
+                        0x27a789d8, 0x2df94971, 0x75624996, 0xf4f1af73, 0xf9f03713, 0x3ae7b0f0, 0xdec01705, 0x3606a04f, 
+                        0x35e6ede4, 0xac1a895a, 0xd1464fa5, 0xc8f1a063, 0xefd204f4, 0xdac9c5e5, 0x5b2e56be, 0x6053ba09, 
+                        0xebbf2804, 0x99f93e97, 0xc4f178c8, 0x619bf9c1, 0x9a33c165, 0x53cbab20, 0x1b718df7, 0xaeec1801 }
 
 
 	
@@ -232,14 +254,9 @@ int main()
 	
 	
 	
-	
-	
-	
-	
-	
 
     /////////// Encryption
-    numOfBits = 2; // t = number of bits e has, but -1
+    numOfBits = 3; // t = number of bits e has, but -1
     void encryption(uint32_t rsqModM, uint32_t rModM, uint32_t e, uint8_t numOfBits, uint32_t message, uint32_t output_ciphertext));
 
 
@@ -250,7 +267,7 @@ int main()
 
 
     /////////// Decryption
-    numOfBits =;
+    numOfBits = 32;
     void decryption(uint32_t rsqModM, uint32_t rModM, uint32_t d, uint8_t numOfBits, uint32_t output_ciphertext, uint32_t output_message);
 
 
