@@ -23,8 +23,7 @@ unsigned int * my_montgomery_data = (unsigned int *)0x43C10000;
 #define DMA_TRANSFER_NUMBER_OF_WORDS 32
 
 //Simple test: mwr 0x40400000 1; mwr 0x40400028 1; mwr 0x40400018 0x100000;
-void bram_dma_transfer(unsigned int* dma_config, unsigned int * data_addr, unsigned int data_len)
-{
+void bram_dma_transfer(unsigned int* dma_config, unsigned int * data_addr, unsigned int data_len){
 	Xil_DCacheFlush(); //Flush the cache to ensure that fresh data is stored inside DRAM
 
 	//Perform the DMA transfer
@@ -33,8 +32,7 @@ void bram_dma_transfer(unsigned int* dma_config, unsigned int * data_addr, unsig
 	dma_config[MM2S_LENGTH_OFFSET] = data_len*4; //Specify number of bytes
 }
 
-void test_dma_transfer()
-{
+void test_dma_transfer(){
 	int h,i;
     unsigned int src[DMA_TRANSFER_NUMBER_OF_WORDS];
 	Xil_DCacheFlush(); //Flush the contents of testmem to DRAM
@@ -73,19 +71,18 @@ void test_dma_transfer()
 	xil_printf("OK\n\r");
 }
 
-void port2_wait_for_done()
-{
+void port2_wait_for_done(){
 	while(my_montgomery_port[1]==0)  //Read a response from P2
 	{}
 }
 
-void print_bram_contents()
-{
+void print_bram_contents(){
 	int i;
 	xil_printf("BRAM contents:\n\r");
 	for (i=0; i<DMA_TRANSFER_NUMBER_OF_WORDS; i+=4)
 		xil_printf("%08x %08x %08x %08x\n\r",my_montgomery_data[i], my_montgomery_data[i+1], my_montgomery_data[i+2], my_montgomery_data[i+3]);
 }
+
 
 
 void mont(uint32_t result, uint32_t A, uint32_t B, uint32_t m){
@@ -142,8 +139,7 @@ void encryption(uint32_t *rsqModM, uint32_t *rModM, uint32_t e, uint8_t *numOfBi
 
     /////////// Initialise variables: A, x_delta
     uint32_t A, x_delta;
-    uint32_t bin = 0b1;  //use this to bitwise-AND 
-
+    uint32_t bin = 0b100;  //use this to bitwise-AND 
 
     A = rModM;
     mont(x_delta, input_message, rsqModM, modullus);  // x_delta = Mont(message, rsqModM)
@@ -151,44 +147,43 @@ void encryption(uint32_t *rsqModM, uint32_t *rModM, uint32_t e, uint8_t *numOfBi
 
     /////////// Calculate A depending on e(i) ///////////
     // With each iteration, bin = bin * 2 to get the next bit
-    for(i = 0; i < numOfBits; i--){
+    for(i = numOfBits; i > 0; i--){
         if((e & bin) == 0)  mont(A, A, modullus);
         else                mont(A, A, x_delta, modullus);
 
-        bin = bin << 1;
+        bin = bin >> 1;
     }
 
 
     /////////// Finalise A ///////////
     mont(output_ciphertext, A, 1, modullus);
-
-
 }
+
+
+
+
 
 void decryption(uint32_t *rsqModM, uint32_t *rModM, uint32_t *d, uint32_t *modullus, uint32_t *input_ciphertext, uint32_t *output_message){
     
     /////////// Initialise variables: A, x_delta
     uint32_t A, x_delta; 
-    uint32_t bin = 0b1;  //use this to bitwise-AND 
+    uint32_t bin = 0b10000000000000000000000000000000;  //use this to bitwise-AND 
 
     A = rModM;
     mont(x_delta, input_message, rsqModM, modullus);  // x_delta = Mont(message, rsqModM)
-
-
 
 
     /////////// Calculate A depending on e(i) ///////////
     // With each iteration, bin = bin * 2 to get the next bit
     // i toggles d[i]
     // j toggles the bits within d[i]
-    
-    for(i = 0; i < numOfBits; i--){
+    for(i = numOfBits; i >= 0; i--){
         temp = d[i];
-        for(j = 0; j < 32; j++){
-            if(temp & bin == 0)   mont(A, A, A, modullus);
-            else            mont(A, A, x_delta, modullus);
+        for(j = 32; j > 0; j--){
+            if(temp & bin == 0) mont(A, A, A, 		modullus); // A = mont(A, A) with implicit mod modullus
+            else            	mont(A, A, x_delta, modullus);
 
-            bin = bin << 1;
+            bin = bin >> 1; // bin = bin / 2;
         }
     }
 
@@ -209,9 +204,9 @@ int main()
 
     test_dma_transfer();
 
-    /////////// Initialise variables - turn these into array of 32bit numbers!!
+    /////////// Initialise variables - change 'testVector.h' if necessary!
     // Seed = 2016. 
-    //numbers are least significant to most significant
+    // numbers are least significant to most significant
 
 	
 	
@@ -240,10 +235,11 @@ int main()
 
 
     /////////// Compare the encrypted & decrypted results
+	//output_ciphertext - output_message;
 
 
-
-
+	// TODO:
+	// 1) make sure that the array is processing through the info in the correct order
 
 
 
