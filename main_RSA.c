@@ -90,44 +90,44 @@ void print_bram_contents(){
 
 void mont(uint32_t *result, uint32_t *A, uint32_t *B, uint32_t *m){
 
-    xil_printf("Start Mont: ");
+    xil_printf("Doing Mont...");
 
     // Send message
-    xil_printf("Sending A...");
+    //xil_printf("Sending A...\n\r");
     my_montgomery_port[0] = 0x0; //Send a command to P1
     bram_dma_transfer(dma_config, A, DMA_TRANSFER_NUMBER_OF_WORDS);
     port2_wait_for_done(); //Wait until Port2=1
 
 
     // Send rsqModM
-    xil_printf("Sending B...\n\r");
+    //xil_printf("Sending B...\n\r");
     my_montgomery_port[0] = 0x0; //Send a command to P1
     bram_dma_transfer(dma_config, B, DMA_TRANSFER_NUMBER_OF_WORDS);
     port2_wait_for_done(); //Wait until Port2=1
 
 
     // Send modullus
-    xil_printf("Sending m...");
+    //xil_printf("Sending m...\n\r");
     my_montgomery_port[0] = 0x0; //Send a command to P1
     bram_dma_transfer(dma_config, m, DMA_TRANSFER_NUMBER_OF_WORDS);
     port2_wait_for_done(); //Wait until Port2=1
 
 
     // Compute Mont(message, rsqModM)
-    xil_printf("Computing...");
+    //xil_printf("Computing...");
     my_montgomery_port[0] = 0x1; //Send a command to P1
     port2_wait_for_done(); //Wait until Port2=1
     //print_bram_contents(); //Print BRAM to serial port.
 
 
     // Print x_delta values
-    /*
+
     xil_printf("Results: \n\r");
     my_montgomery_port[0] = 0x2; //Send a command to P1
     port2_wait_for_done(); //Wait until Port2=1
     print_bram_contents(); //Print BRAM to serial port.
-    */
-    xil_printf("Done!\n\n\r");
+
+    xil_printf("Done!\n\r");
     int i = 0;
 
     // Give the results to 'result'
@@ -145,17 +145,28 @@ void mont(uint32_t *result, uint32_t *A, uint32_t *B, uint32_t *m){
 void print_output(uint32_t *output){
     int i;
     xil_printf("Encrypted/Decrypted content:\n\r");
-    for (i=0; i<DMA_TRANSFER_NUMBER_OF_WORDS; i+=4)
-        xil_printf("%08x %08x %08x %08x\n\r",my_montgomery_data[i], my_montgomery_data[i+1], my_montgomery_data[i+2], my_montgomery_data[i+3]);
+    for (i=0; i<32; i+=4)
+        xil_printf("%08x %08x %08x %08x\n\r",output[i], output[i+1], output[i+2], output[i+3]);
 }
 
 
 
 void encryption(uint32_t *rsqModM, uint32_t *rModM, uint32_t e, uint8_t numOfBits, uint32_t *modullus, uint32_t *input_message, uint32_t *output_ciphertext){
 
+
+/***FOR TESTING PURPOSES
+    uint32_t testE   = 0x011;
+    uint32_t testBin = 0b00000000000;
+    xil_printf("TEST\n\r[e = %x, b = %d, res = %d]\n\n\n\r", testE, testBin, (testE & testBin));
+***/
+    //xil_printf(" :D  ");
+
+
+
+
     /////////// Initialise variables: A, x_delta
-    uint32_t A[32], x_delta;
-    uint32_t bin = 0b100;  //use this to bitwise-AND
+    uint32_t A[32] = {0}, x_delta[32] = {0}, temp[32] = {0};
+    uint32_t bin = 0b100000000;  //use this to bitwise-AND
     int i = 0;
 
     for(i = 0; i < 32; i++){ A[i] = rModM[i]; } // A = rModM
@@ -166,16 +177,17 @@ void encryption(uint32_t *rsqModM, uint32_t *rModM, uint32_t e, uint8_t numOfBit
     // With each iteration, bin = bin * 2 to get the next bit
 
 
-    for(i = numOfBits; i > 0; i--){
-        if((e & bin) == 0)  mont(A, A, A, modullus);
-        else                mont(A, A, x_delta, modullus);
+    for(i = numOfBits; i >= 0; i--){
 
+        mont(A, A, A, modullus);
+        if((e & bin) != 0) mont(A, A, x_delta, modullus);
+        //xil_printf("[e = %x, b = %d, res = %d]\n\r", e, bin, (e & bin));
         bin = bin >> 1;
     }
 
-
+    temp[0] = 0x1;
     /////////// Finalise A ///////////
-    mont(output_ciphertext, A, 1, modullus);
+    mont(output_ciphertext, A, temp, modullus);
 }
 
 
@@ -201,7 +213,7 @@ void decryption(uint32_t *rsqModM, uint32_t *rModM, uint32_t *d, uint8_t numOfBi
         temp = d[i];
         for(j = 32; j > 0; j--){
             if(temp & bin == 0) mont(A, A, A,       modullus); // A = mont(A, A) with implicit mod modullus
-            else                mont(A, A, x_delta, modullus);
+            else mont(A, A, x_delta, modullus);
 
             bin = bin >> 1; // bin = bin / 2;
         }
@@ -220,8 +232,8 @@ void decryption(uint32_t *rsqModM, uint32_t *rModM, uint32_t *d, uint8_t numOfBi
 int main()
 {
     int i;
-    int8_t numOfBits;
-    int32_t output_ciphertext[32]={0}, output_message[32]={0};
+    uint8_t numOfBits;
+    uint32_t output_ciphertext[32]={0}, output_message[32]={0};
 
 
 
@@ -251,12 +263,21 @@ int main()
 
 
 
+    uint32_t rsqModM[32]={0}, rModM[32]={0}, modullus[32]={0}, d[32]={0}, message[32]={0};
 
 
+    // FLIPPIN
+    for(i=0; i<32; i++){
+        rsqModM[i] = rsqModM_t[i];
+        rModM[i] = rModM_t[i];
+        modullus[i] = modullus[i];
+        d[i] = d_t[i];
+        message[i] = message_t[i];
+    }
 
 
     /////////// Encryption
-    numOfBits = 3; // t = number of bits e has, but -1
+    numOfBits = 9; // t = number of bits of e IN BINARY THOUGH
     encryption(rsqModM, rModM, e, numOfBits, modullus, message, output_ciphertext);
 
 
