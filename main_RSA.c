@@ -121,12 +121,12 @@ void mont(uint32_t *result, uint32_t *A, uint32_t *B, uint32_t *m){
 
 
     // Print x_delta values
-
+/*
     xil_printf("Results: \n\r");
     my_montgomery_port[0] = 0x2; //Send a command to P1
     port2_wait_for_done(); //Wait until Port2=1
     print_bram_contents(); //Print BRAM to serial port.
-
+*/
     xil_printf("Done!\n\r");
     int i = 0;
 
@@ -154,13 +154,6 @@ void print_output(uint32_t *output){
 void encryption(uint32_t *rsqModM, uint32_t *rModM, uint32_t e, uint8_t numOfBits, uint32_t *modullus, uint32_t *input_message, uint32_t *output_ciphertext){
 
 
-/***FOR TESTING PURPOSES
-    uint32_t testE   = 0x011;
-    uint32_t testBin = 0b00000000000;
-    xil_printf("TEST\n\r[e = %x, b = %d, res = %d]\n\n\n\r", testE, testBin, (testE & testBin));
-***/
-    //xil_printf(" :D  ");
-
 
 
 
@@ -173,21 +166,34 @@ void encryption(uint32_t *rsqModM, uint32_t *rModM, uint32_t e, uint8_t numOfBit
     mont(x_delta, input_message, rsqModM, modullus);  // x_delta = Mont(message, rsqModM)
 
 
+
+
     /////////// Calculate A depending on e(i) ///////////
     // With each iteration, bin = bin * 2 to get the next bit
 
 
     for(i = numOfBits; i >= 0; i--){
-
         mont(A, A, A, modullus);
         if((e & bin) != 0) mont(A, A, x_delta, modullus);
         //xil_printf("[e = %x, b = %d, res = %d]\n\r", e, bin, (e & bin));
         bin = bin >> 1;
     }
 
-    temp[0] = 0x1;
+
+
+
+
+    xil_printf("////////////////////////\n\rDEBUGGING HERE: \n\r");
+    print_output(A);
+    xil_printf("////////////////////////\n\rOUT__BUGGING HERE: \n\r");
+
+
+
+    //temp[0] = 0x1;
     /////////// Finalise A ///////////
-    mont(output_ciphertext, A, temp, modullus);
+    mont(output_ciphertext, A, 0x1, modullus);
+
+
 }
 
 
@@ -220,8 +226,13 @@ void decryption(uint32_t *rsqModM, uint32_t *rModM, uint32_t *d, uint8_t numOfBi
     }
 
 
+
+
+
+
     /////////// Finalise A ///////////
     mont(output_message, A, 1, modullus);
+
 
 
 }
@@ -268,12 +279,14 @@ int main()
 
     // FLIPPIN
     for(i=0; i<32; i++){
-        rsqModM[i] = rsqModM_t[i];
-        rModM[i] = rModM_t[i];
-        modullus[i] = modullus[i];
-        d[i] = d_t[i];
-        message[i] = message_t[i];
+        rsqModM[i] = rsqModM_t[31-i];
+        rModM[i] = rModM_t[31-i];
+        modullus[i] = modullus_t[31-i];
+        d[i] = d_t[31-i];
+        message[i] = message_t[31-i];
     }
+
+
 
 
     /////////// Encryption
