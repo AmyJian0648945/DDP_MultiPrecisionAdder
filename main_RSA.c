@@ -123,12 +123,12 @@ void mont(uint32_t *result, uint32_t *A, uint32_t *B, uint32_t *m){
 
 
     // Print x_delta values
-    /*
+    
     xil_printf("Results: \n\r");
     my_montgomery_port[0] = 0x2; //Send a command to P1
     port2_wait_for_done(); //Wait until Port2=1
     print_bram_contents(); //Print BRAM to serial port.
-    */
+    
     xil_printf("Done!\n\r");
     int i = 0;
 
