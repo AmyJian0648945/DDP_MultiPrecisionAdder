@@ -207,10 +207,7 @@ void encryption(uint32_t *rsqModM, uint32_t *rModM, uint32_t e, uint8_t numOfBit
 
 
 
-    xil_printf("////////////////////////\n\rDEBUGGING HERE: \n\r");
-    print_output(A);
-    xil_printf("////////////////////////\n\rOUT__BUGGING HERE: \n\r");
-
+   
 
     //temp[0] = 0x1;
     /////////// Finalise A ///////////
@@ -228,7 +225,7 @@ void decryption(uint32_t *rsqModM, uint32_t *rModM, uint32_t *d, uint8_t numOfBi
     /////////// Initialise variables: A, x_delta
     uint32_t A[32], x_delta, temp;
     uint32_t bin = 0b10000000000000000000000000000000;  //use this to bitwise-AND
-    int i = 0, j = 0;
+    uint8_t i = 0, j = 0, flag = 0;
 
     for(i = 0; i < 32; i++){ A[i] = rModM[i]; } // A = rModM
     mont(x_delta, input_ciphertext, rsqModM, modullus);  // x_delta = Mont(message, rsqModM)
@@ -236,13 +233,21 @@ void decryption(uint32_t *rsqModM, uint32_t *rModM, uint32_t *d, uint8_t numOfBi
 
     /////////// Calculate A depending on e(i) ///////////
     // With each iteration, bin = bin * 2 to get the next bit
-    // i toggles d[i]
+    // i toggles the words 
     // j toggles the bits within d[i]
     for(i = numOfBits; i >= 0; i--){
         temp = d[i];
         for(j = 32; j > 0; j--){
-            if(temp & bin == 0) mont(A, A, A,       modullus); // A = mont(A, A) with implicit mod modullus
-            else mont(A, A, x_delta, modullus);
+            if(flag == 0){ // makes sure first bit to compute is 1
+                if(temp & bin != 0){ 
+                    mont(A, A, x_delta, modullus);
+                    flag = 1;
+                }
+            }
+            else{ // starts doing the mont stuff
+                if(temp & bin == 0) mont(A, A, A, modullus); // A = mont(A, A) with implicit mod modullus
+                else                mont(A, A, x_delta, modullus);
+            }
 
             bin = bin >> 1; // bin = bin / 2;
         }
@@ -340,7 +345,7 @@ int main()
 /*
 
     /////////// Decryption
-    //numOfBits = 32;
+    //numOfBits = 1024;
     //decryption(rsqModM, rModM, d, numOfBits, modullus, output_ciphertext, output_message);
 
 
@@ -354,7 +359,7 @@ int main()
     //output_ciphertext - output_message;
      *
      *
-*/
+    */
 
     /************************
     DEBUG TODO:
