@@ -15,6 +15,8 @@
 #define MM2S_SA_OFFSET (0x18/4)
 #define MM2S_LENGTH_OFFSET (0x28/4)
 
+#define GET_VAR_NAME(Variable)(#Variable)
+
 unsigned int * dma_config         = (unsigned int *)0x40400000;
 unsigned int * my_montgomery_port = (unsigned int *)0x43C00000;
 unsigned int * my_montgomery_data = (unsigned int *)0x43C10000;
@@ -144,10 +146,17 @@ void mont(uint32_t *result, uint32_t *A, uint32_t *B, uint32_t *m){
 
 void print_output(uint32_t *output){
     int i;
-    xil_printf("Encrypted/Decrypted content:\n\r");
+    xil_printf("Printing: %x\n\r", GET_VAR_NAME(output));
+
     for (i=0; i<32; i+=4)
         xil_printf("%08x %08x %08x %08x\n\r",output[i], output[i+1], output[i+2], output[i+3]);
+	xil_printf("\n\r");
 }
+
+
+
+
+
 
 
 
@@ -165,8 +174,7 @@ void encryption(uint32_t *rsqModM, uint32_t *rModM, uint32_t e, uint8_t numOfBit
     for(i = 0; i < 32; i++){ A[i] = rModM[i]; } // A = rModM
     mont(x_delta, input_message, rsqModM, modullus);  // x_delta = Mont(message, rsqModM)
 
-
-
+	print_output(x_delta);
 
     /////////// Calculate A depending on e(i) ///////////
     // With each iteration, bin = bin * 2 to get the next bit
@@ -174,19 +182,20 @@ void encryption(uint32_t *rsqModM, uint32_t *rModM, uint32_t e, uint8_t numOfBit
 
     for(i = numOfBits; i >= 0; i--){
         mont(A, A, A, modullus);
-        if((e & bin) != 0) mont(A, A, x_delta, modullus);
+		print_output(A); 
+        if((e & bin) != 0) {
+			mont(A, A, x_delta, modullus);
+			print_output(A);
+		}
         //xil_printf("[e = %x, b = %d, res = %d]\n\r", e, bin, (e & bin));
         bin = bin >> 1;
     }
 
 
 
-
-
     xil_printf("////////////////////////\n\rDEBUGGING HERE: \n\r");
     print_output(A);
     xil_printf("////////////////////////\n\rOUT__BUGGING HERE: \n\r");
-
 
 
     //temp[0] = 0x1;
@@ -246,7 +255,7 @@ int main()
     uint8_t numOfBits;
     uint32_t output_ciphertext[32]={0}, output_message[32]={0};
 
-
+ 	uint32_t rsqModM[32]={0}, rModM[32]={0}, modullus[32]={0}, d[32]={0}, message[32]={0};
 
     init_platform();
     xil_printf("\n\n\n\n\n\n\n\nStartup..\n\r");
@@ -258,26 +267,11 @@ int main()
 
 
 
+   
 
 
+    // FLIPPIN the values around
 /*
-    //TESTING PURPOSES ONLY -
-
-    uint32_t a[32] = {0x1ba, 0x0, 0x0, 0x0, 0x0, 0x0, 0x0, 0x0, 0x0, 0x0, 0x0, 0x0, 0x0, 0x0, 0x0, 0x0, 0x0, 0x0, 0x0, 0x0, 0x0, 0x0, 0x0, 0x0, 0x0, 0x0, 0x0, 0x0, 0x0, 0x0, 0x0 , 0x0};
-    uint32_t b[32] = {0x91b, 0x0, 0x0, 0x0, 0x0, 0x0, 0x0, 0x0, 0x0, 0x0, 0x0, 0x0, 0x0, 0x0, 0x0, 0x0, 0x0, 0x0, 0x0, 0x0, 0x0, 0x0, 0x0, 0x0, 0x0, 0x0, 0x0, 0x0, 0x0, 0x0, 0x0, 0x0};
-    uint32_t N[32] = {0xe67a6f31, 0xa677bce5, 0x3b9e66f8, 0x32dff402, 0x2ab9a7c8, 0xbe08bc1e, 0x2ade1186, 0x8e88e8cf, 0x716a5c3b, 0x5453c47, 0x93ade446, 0xdc771f42, 0xe1709725, 0x7f89ebb5, 0x1d501ea9, 0x93c9933, 0xcf1ae468, 0x56ba1eb0, 0x358e7c24, 0x2daae084, 0x4da058ec, 0x27028a89, 0x4f2e5438, 0x29ab96b2, 0xf9072101, 0xe7990185, 0x199af8fe, 0x6887926d, 0xcfb0450e, 0x36a53dd9, 0xed3982c, 0xd1d3b4d6};
-    uint32_t result[32] = {0};
-
-    mont(result, a, b, N);
-    print_output(result);
-*/
-
-
-
-    uint32_t rsqModM[32]={0}, rModM[32]={0}, modullus[32]={0}, d[32]={0}, message[32]={0};
-
-
-    // FLIPPIN
     for(i=0; i<32; i++){
         rsqModM[i] = rsqModM_t[31-i];
         rModM[i] = rModM_t[31-i];
@@ -285,6 +279,7 @@ int main()
         d[i] = d_t[31-i];
         message[i] = message_t[31-i];
     }
+*/
 
 
 
@@ -294,9 +289,10 @@ int main()
     encryption(rsqModM, rModM, e, numOfBits, modullus, message, output_ciphertext);
 
 
-
     /////////// Print out encryption results
     print_output(output_ciphertext);
+
+
 
 
 /*
