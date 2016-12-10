@@ -143,7 +143,7 @@ void mont(uint32_t *result, uint32_t *A, uint32_t *B, uint32_t *m){
 
 
 
-void print_output(uint32_t *output){
+void print_output(uint32_t *output){ // prints out whatever you give it
     int i;
 
     for (i=0; i<32; i+=4)
@@ -153,7 +153,22 @@ void print_output(uint32_t *output){
 
 
 
-void compare(uint32_t *a, uint32_t *b){
+void diff(uint32_t *result, uint32_t *a, uint32_t *b){ // tells you if a and b are the same. If not, prints them out
+    uint32_t i = 0;
+    uint8_t flag = 0;
+
+    for(i = 0; i < 32; i++ ){
+        result[i] = a[i] - b[i];
+
+        if(result[i] != 0) flag = 1; // check if there's any difference
+    }
+
+    if(flag == 0) xil_printf("Your results are the same! Good job :D ");
+    else{
+        xil_print("Results don't match! Keep trying!");
+        print_output(result);
+    }
+
 
 }
 
@@ -294,10 +309,20 @@ void decryption(uint32_t *rsqModM, uint32_t *rModM, uint32_t *d, uint8_t numOfBi
 
 int main()
 {
+    /////////// Initialisation of System
+    init_platform();
+    xil_printf("\n\n\n\n\n\n\n\nStartup..\n\r");
+    test_dma_transfer();
+
+
+
+
+
+
+    /////////// Initialisation of variables and things to test
     int i;
     uint8_t numOfBits;
     uint32_t output_ciphertext[32]={0}, output_message[32]={0};
-
     
     // numbers are least significant to most significant
     uint32_t rsqModM_t[32] = { 0x8cf805fd, 0xfaf6e1b1, 0xc738c287, 0xb60638e, 0xee386014, 0xcd5908a, 0xf1654044, 0x54d4a876, 0xfd89d508, 0xd3700427, 0x8d427386, 0x3f734a5, 0xb18a35b7, 0x6116e78, 0x9458f4, 0x6a18d5b2, 0x2474e016, 0x20d5c5a1, 0x87e2ae0, 0x6962d2b, 0x4fb69212, 0xb9d3f3e4, 0xcf649200, 0x9e7dc826, 0xd2748f7e, 0xc0f25644, 0x514032a, 0xd155419f, 0x900034aa, 0x7a8f5f54, 0x4d55b6f9, 0x187c74c7  };
@@ -308,18 +333,6 @@ int main()
     uint32_t message_t[32] = {0x6395c695, 0x3f4bd35b, 0x4776e77d, 0xfbd369c, 0x19384a9e, 0x7c662a00, 0xf0ac06d9, 0x6e3d9096, 0x15d274b5, 0x44a415b0, 0xb0233f1d, 0x2cf0a6d3, 0x33c43a4e, 0x9a5df015, 0x87c4b38e, 0x2fdb4086, 0x2d29831d, 0x5414383e, 0x7c853481, 0x977e9e01, 0x9fb4ecfc, 0x90036226, 0x1ee5cba8, 0xb5476321, 0xe781ee92, 0xbec3335b, 0x1e005a53, 0xd7e014e2, 0x165a3d1a, 0xf550bd84, 0xd03de810, 0x815cb73 };
     //message = 815CB73D03DE810F550BD84165A3D1AD7E014E21E005A53BEC3335BE781EE92B54763211EE5CBA8900362269FB4ECFC977E9E017C8534815414383E2D29831D2FDB408687C4B38E9A5DF01533C43A4E2CF0A6D3B0233F1D44A415B015D274B56E3D9096F0AC06D97C662A0019384A9E0FBD369C4776E77D3F4BD35B6395C695
 
-
-
-
-
-
-    /////////// Initialisation and stuff :D
-    init_platform();
-    xil_printf("\n\n\n\n\n\n\n\nStartup..\n\r");
-    test_dma_transfer();
-
-
-    
 
 
     // FOR DEBUGGING MONT! DON'T DELETE THIS YET
@@ -333,12 +346,6 @@ int main()
     */
 
 
-
-
-
-
-
-
     // FLIPPIN the values around
 
     for(i=0; i<32; i++){
@@ -350,13 +357,6 @@ int main()
     }
 
 
-    // FOR DEBUGGING - DELETE LATER
-    xil_printf("check if info is being read in!: \n\r");
-    print_output(modullus);
-
-
-
-
 
 
 
@@ -365,7 +365,7 @@ int main()
     encryption(rsqModM, rModM, e, numOfBits, modullus, message, output_ciphertext);
 
 
-    /////////// Print out encryption results
+    // Print out encryption results
     print_output(output_ciphertext);
 
 
@@ -382,17 +382,23 @@ int main()
     //decryption(rsqModM, rModM, d, numOfBits, modullus, output_ciphertext, output_message);
 
 
+    // Print out decryption results
+    print_output(output_message);
 
-    /////////// Print out decryption results
-    //print_output(output_message);
+
+
+
+
+
 
 
 
     /////////// Compare the encrypted & decrypted results
-    //output_ciphertext - output_message;
-     *
-     *
-    */
+    uint32_t finalResult[32] = {0};
+    
+
+*/
+
 
     /************************
     DEBUG TODO:
@@ -400,15 +406,7 @@ int main()
     - make sure mont is correct
         - make sure that the output of it is correct
     - double check that the mont exponentiation is following the correct flow:
-        -
-    -
     - make sure that the array is processing through the info in the correct order
-
-
-
-
-
-
     ************************/
 
 
