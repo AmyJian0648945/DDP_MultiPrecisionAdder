@@ -153,9 +153,9 @@ void print_output(uint32_t *output){ // prints out whatever you give it
 
 
 
-void diff(uint32_t *result, uint32_t *a, uint32_t *b){ // tells you if a and b are the same. If not, prints them out
-    uint32_t i = 0;
-    uint8_t flag = 0;
+void compare(uint32_t *a, uint32_t *b){ // tells you if a and b are the same. If not, prints them out
+    uint32_t result[32] = {0};
+    uint8_t flag = 0, i = 0;
 
     for(i = 0; i < 32; i++ ){
         result[i] = a[i] - b[i];
@@ -394,7 +394,7 @@ int main()
 
 
     /////////// Compare the encrypted & decrypted results
-    uint32_t finalResult[32] = {0};
+    compare(output_ciphertext, output_message);
     
 
 */
