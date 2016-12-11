@@ -125,7 +125,7 @@ E78B18A35B703F734A58D427386D3700427FD89D50854D4A876F16540440CD5908AEE3860140B60\
 	// pre-computation
 	montgo1024(x, r2modm, x_tilda);
 	mpz_set(A, rmodm);
-	gmp_printf("Precomputation Result =%ZX\n\n", x_tilda);
+	gmp_printf("X_tilda =%ZX\n\n", x_tilda);
 
 	int bit;
 	int first_nonzero_bit_found = 0;
@@ -179,7 +179,7 @@ C227FA5E067888759258C224BBF1F3", 16);
 
 	int COUNTER;
 
-	for(COUNTER=0; COUNTER<1; COUNTER++)
+	for(COUNTER=0; COUNTER<10; COUNTER++)
 	{
 		mpz_urandomb(message, r_state,1023);
 		mpz_mod(message, message, M);
